@@ -1,6 +1,6 @@
 // contracts/SwapExample.sol
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.7.6;
+pragma solidity =0.7.6;
 pragma abicoder v2;
 
 import '@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol';
