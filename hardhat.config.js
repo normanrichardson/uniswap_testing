@@ -1,6 +1,6 @@
 require('@nomiclabs/hardhat-ethers');
 require('@nomiclabs/hardhat-waffle');
-require('dotenv').config
+require('dotenv').config();
 
 /**
  * @type import('hardhat/config').HardhatUserConfig
@@ -16,17 +16,17 @@ const UNISWAP_SETTING = {
             runs: 2_000,
         },
     },
+};
+
+module.exports = {
+    defaultNetwork: 'hardhat',
     networks: {
         hardhat: {
             forking: {
-                url: alchemyUrl
+                url: alchemyUrl,
             }
         }
-    }
-};
-
-
-module.exports = {
+    },
     solidity: {
         compilers: [UNISWAP_SETTING],
         overrides:{}
