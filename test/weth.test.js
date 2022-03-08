@@ -18,31 +18,64 @@ describe('Test WETH', () => {
         this.owner = owner;
         this.other1 = other1;
         this.other2 = other2;
-        
     });
+
     it('Deposit WETH', async () => {
-        const bal_before = await this.owner.getBalance();
-        const wei = ethers.utils.parseEther('1000');
-        const tx = await this.weth.connect(this.owner).deposit({value: wei});
+        const eth_before = await this.owner.getBalance();
+        const weth_before = await this.weth.balanceOf(this.owner.address);
+        const wei_transfer = ethers.utils.parseEther('0.001');
+        const tx = await this.weth.connect(this.owner).deposit({value: wei_transfer});
 
-        const bal_after = await this.owner.getBalance();
+        const eth_after = await this.owner.getBalance();
+        const weth_after = await this.weth.balanceOf(this.owner.address);
+        
+        expect(weth_after - weth_before).to.equal(wei_transfer);
+        expect(eth_before - eth_after).to.gt(wei_transfer); 
+    });
+        
+    it('Transfer WETH by owner', async () => {
+        // Participants
+        const p1 = this.owner;
+        const p2 = this.other1;
+        const p1WethBefore = await this.weth.balanceOf(p1.address);
+        const p2WethBefore = await this.weth.balanceOf(p2.address);
+        // Dealing with bignumber casting issues
+        const transAmm = p1WethBefore > ethers.utils.parseEther('0.001') ? ethers.utils.parseEther('0.001') : p1WethBefore/4;
+
+        await this.weth.transfer(p2.address, transAmm);
+        const p1WthAfter = await this.weth.balanceOf(p1.address);
+        const p2WthAfter = await this.weth.balanceOf(p2.address);
+
+        expect(p1WethBefore-p1WthAfter-transAmm).to.equal(0);
+        expect(p2WthAfter-p2WethBefore-transAmm).to.equal(0);
+    });
+
+    it('Transfer WETH by 3rd party', async () => {
+        // Participants
+        const p1 = this.owner;
+        const p2 = this.other1;
+        const p3 = this.other2;
+        const p1WethBefore = await this.weth.balanceOf(p1.address);
+        const p3WethBefore = await this.weth.balanceOf(p3.address);
+        // Dealing with bignumber casting issues
+        const transAmm = p1WethBefore > ethers.utils.parseEther('0.001') ? ethers.utils.parseEther('0.001') : p1WethBefore/4;
+
+        await this.weth.connect(p1).approve(p2.address, transAmm);
+        await this.weth.connect(p2).transferFrom(p1.address, p3.address, transAmm);
+
+        const p1WthAfter = await this.weth.balanceOf(p1.address);
+        const p3WthAfter = await this.weth.balanceOf(p3.address);
+
+        expect(p1WethBefore-p1WthAfter-transAmm).to.equal(0);
+        expect(p3WthAfter-p3WethBefore-transAmm).to.equal(0);
+    });
+
+    it('Withdraw ETH', async () => {
         const balance = await this.weth.balanceOf(this.owner.address);
         
-        console.log(`Balance before: ${ethers.utils.formatEther(bal_before)}`);
-        console.log(`Balance after: ${ethers.utils.formatEther(bal_after)}`);
-        console.log(`Ammount deposited: ${ethers.utils.formatEther(balance)}`);
-        console.log(`Transfer requested: ${ethers.utils.formatEther(wei)}`);
-        //console.log(`Transfer recieved: ${ethers.utils.formatEther(value)}`);
-    });
-    it('Withdraw ETH', async () => {
-        const bal_before = await this.owner.getBalance();
-        const balance = await this.weth.balanceOf(this.owner.address);
-
         await this.weth.withdraw(balance);
-        const bal_after = await this.owner.getBalance();
+        const bal_after = await this.weth.balanceOf(this.owner.address);
 
-        console.log(`Balance before: ${ethers.utils.formatEther(bal_before)}`);
-        console.log(`Balance after: ${ethers.utils.formatEther(bal_after)}`);
-        console.log(`Ammount deposited: ${ethers.utils.formatEther(balance)}`);
-    })
+        expect(bal_after).to.equal(0);
+    });
 });
