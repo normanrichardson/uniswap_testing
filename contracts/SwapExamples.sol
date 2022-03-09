@@ -7,12 +7,14 @@ import '@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 
 contract SwapExample{
-    address public constant Tk1 = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
-    address public constant Tk2 = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+    address private Tk1;
+    address private Tk2;
     uint24 public constant poolFee = 3000;
     ISwapRouter public immutable router;
 
-    constructor(ISwapRouter _router) {
+    constructor(ISwapRouter _router, address _Tk1, address _Tk2) {
+        Tk1 = _Tk1;
+        Tk2 = _Tk2;
         router = _router;
     }
 
