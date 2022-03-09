@@ -1,3 +1,6 @@
+// contracts/DepositableERC20.sol
+// SPDX-License-Identifier: MIT
+
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 // Add deposit function for WETH

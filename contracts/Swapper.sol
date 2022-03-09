@@ -6,7 +6,7 @@ pragma abicoder v2;
 import '@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 
-contract SwapExample{
+contract Swapper{
     address private Tk1;
     address private Tk2;
     uint24 public constant poolFee = 3000;

@@ -2,8 +2,6 @@
 
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
-const { isCallTrace } = require('hardhat/internal/hardhat-network/stack-traces/message-trace');
-
 
 describe('Swapping weth for dia', () => {
     before( async () => {
@@ -13,9 +11,9 @@ describe('Swapping weth for dia', () => {
         
         const router = await ethers.getContractAt('ISwapRouter', routerAddress);
         
-        const SwapExamples = await ethers.getContractFactory('SwapExample');
+        const Swapper = await ethers.getContractFactory('Swapper');
         
-        this.swapperDia = await SwapExamples.deploy(router.address, wethAddress, daiAddress);
+        this.swapperDia = await Swapper.deploy(router.address, wethAddress, daiAddress);
         this.weth = await ethers.getContractAt('DepositableERC20', wethAddress);
         this.dia = await ethers.getContractAt('DepositableERC20', daiAddress);
 
