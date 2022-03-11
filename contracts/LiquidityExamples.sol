@@ -16,7 +16,7 @@ contract LiquidityExamples is IERC721Receiver {
     address private tk1;
     address private tk2;
 
-    uint24 public constant poolFee = 3000;
+    uint24 public constant poolFee = 100;
 
     INonfungiblePositionManager public immutable nonfungiblePositionManager;
 
@@ -30,6 +30,8 @@ contract LiquidityExamples is IERC721Receiver {
 
     /// @dev deposits[tokenId] => Deposit
     mapping(uint256 => Deposit) public deposits;
+
+    event IncLiquidity(uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1);
 
     constructor(
         INonfungiblePositionManager _nonfungiblePositionManager,
@@ -112,6 +114,8 @@ contract LiquidityExamples is IERC721Receiver {
 
         // Note that the pool defined by DAI/USDC and fee tier 0.3% must already be created and initialized in order to mint
         (tokenId, liquidity, amount0, amount1) = nonfungiblePositionManager.mint(params);
+
+        emit IncLiquidity(tokenId, liquidity, amount0, amount1);
 
         // Create a deposit
         _createDeposit(msg.sender, tokenId);
