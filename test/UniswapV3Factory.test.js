@@ -1,72 +1,96 @@
-// test/Box.test.js
-// Load dependencies
 const { expect } = require('chai');
-
-// Import utilities from Test Helpers
 const { ethers } = require('hardhat');
-
-const sr = require('@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json');
-const fact = require('@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json');
-const nfpm = require('@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json');
 
 // Start test block
 describe('UniswapV3Factory', function () {
 
     before( async () => {
-        const UniswapV3Factory = await ethers.getContractFactory(fact.abi, fact.bytecode);
-        const SwapRouter = await ethers.getContractFactory(sr.abi, sr.bytecode);
-        const NonfungiblePositionManager = await ethers.getContractFactory(nfpm.abi, nfpm.bytecode);
 
-        const Soap = await ethers.getContractFactory('Soap');
-        const Sofa = await ethers.getContractFactory('Sofa');
+        const routerAddress  = '0xE592427A0AEce92De3Edee1F18E0157C05861564';
+        const posMangAddress = '0xC36442b4a4522E871399CD717aBDD847Ab11FE88';
+        const factoryAddress = '0x1F98431c8aD98523631AE4a59f267346ea31F984';
+        const wethAddress    = '0xc778417E063141139Fce010982780140Aa0cD5Ab';//main'0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2';//rk'0xc778417E063141139Fce010982780140Aa0cD5Ab';
+        const daiAddress     = '0x5592EC0cfb4dbc12D3aB100b257153436a1f0FEa';//main'0x6B175474E89094C44Da98b954EedeAC495271d0F';//rk'0x5592EC0cfb4dbc12D3aB100b257153436a1f0FEa';
+        const wbtcAddress    = '0x577D296678535e4903D59A4C929B718e1D575e0A';//main'0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599';//rk'0x577D296678535e4903D59A4C929B718e1D575e0A';
+
+        const router = await ethers.getContractAt('ISwapRouter', routerAddress);
+        const posMang = await ethers.getContractAt('INonfungiblePositionManager', posMangAddress);
+        const factory = await ethers.getContractAt('IUniswapV3Factory', factoryAddress);
+        const Swapper = await ethers.getContractFactory('Swapper');
+        const Liquidity = await ethers.getContractFactory('LiquidityExamples');
+
+        console.log(`Pool exisits: ${await factory.getPool(daiAddress, wethAddress, 3000)}`);
         
+        this.swapperDia = await Swapper.deploy(router.address, wethAddress, daiAddress);
+        this.swapperWbtc = await Swapper.deploy(router.address, wethAddress, wbtcAddress);
+        /*
+        this.pmWbtcDai = await Liquidity.deploy(posMang.address, daiAddress, wbtcAddress);
+        */
+        this.pmWbtcDai = await Liquidity.deploy(posMang.address, daiAddress, wethAddress);
+        this.weth = await ethers.getContractAt('DepositableERC20', wethAddress);
+        this.dia = await ethers.getContractAt('IERC20', daiAddress);
+        this.wbtc = await ethers.getContractAt('IERC20', wbtcAddress);
 
-        const factory = await UniswapV3Factory.deploy();
-        const soap = await Soap.deploy(100);
-        const sofa = await Sofa.deploy(100);
-        
-        // deploy the pool factory, and ERC20 tokens 
-        await factory.deployed();
-        await soap.deployed();
-        await sofa.deployed();
-        
-        //create a pool for SOAP to SOFA
-        const tx = await factory.createPool(soap.address, sofa.address,3000);
+        // get signers for testing
+        const [signr1, signr2, signr3] = await ethers.getSigners();
 
-        this.swaprouter = await SwapRouter.deploy(factory.address, soap.address);
-        // Point of contention why does NonfungiblePositionManager need to know more 
-        // than the factory address? Why does it need a _WETH and a _tokenDescriptor_ 
-        // address, I'm ignoring this for now
-        this.nftm = await NonfungiblePositionManager.deploy(
-            factory.address, soap.address, soap.address
-        );
-        await this.nftm.deployed();
-
-        
-
-        this.factory = factory;
-        this.soap = soap;
-        this.sofa = sofa;
-        console.log(`SOAP: ${this.soap.address}`);
-        console.log(`SOFA: ${this.sofa.address}`);
-        console.log(`nftm: ${this.nftm.address}`); //0x5fc8d32690cc91d4c39d9d3abcbd16989f875707
+        this.signr1 = signr1;
+        this.signr2 = signr2;
+        this.signr3 = signr3;
     });
 
-    it('1. creates a pool', async () => {
+    it('Add Liquidity', async () => {
+        const signr = this.signr3;
 
-        const LiquidityExamples = await ethers.getContractFactory('LiquidityExamples');
+        console.log(`Signr: ${signr.address}`);
+        const ethTransfer = 0.00000000000000001;
+        const weiTransfer = ethTransfer*ethers.constants.WeiPerEther;
+        
+        // Get Dia
+        await this.weth.connect(signr).deposit({value: weiTransfer});
+        const diaBefore = await this.dia.connect(signr).balanceOf(signr.address);
 
-        const le = await LiquidityExamples.deploy(this.nftm.address);
+        await this.weth.connect(signr).approve(this.swapperDia.address, weiTransfer);
+        await this.swapperDia.connect(signr).swapExactInputSingle(weiTransfer);
 
-        const tx1 = await this.soap.approve(le.address, 1);
-        const tx2 = await this.sofa.approve(le.address, 1);
+        console.log("HIHI1")
+        const diaAfter = await this.dia.balanceOf(signr.address);
+        const diaLiq = diaAfter - diaBefore;
 
-        expect(tx1).to.emit('Approval');
-        expect(tx2).to.emit('Approval');
+        expect(diaBefore).to.lt(diaAfter);
+        console.log("HIHI2")
+        // Get WBTC
+        await this.weth.connect(signr).deposit({value: weiTransfer});
+        /*
+        const wbtcBefore = await this.wbtc.balanceOf(signr.address);
 
-        let {tokenId, liquidity, amount0, amount1} =  await le.mintNewPosition();
+        await this.weth.connect(signr).approve(this.swapperWbtc.address, weiTransfer);
+        await this.swapperWbtc.connect(signr).swapExactInputSingle(weiTransfer);
 
-        console.log(this.soap.address, this.sofa.address);
+        console.log("HIHI1")
+        const wbtcAfter = await this.wbtc.balanceOf(signr.address);
+        const wbtcLiq = wbtcAfter - wbtcBefore;
+
+        expect(wbtcBefore).to.lt(wbtcAfter);
+        console.log("HIHI2")
+        */
+        // Add liquidity
+        //console.log(diaLiq);
+        //console.log(wbtcLiq);
+        
+        await this.dia.connect(signr).approve(this.pmWbtcDai.address, diaLiq);
+        await this.weth.connect(signr).approve(this.pmWbtcDai.address, weiTransfer);
+        /*
+        await this.wbtc.connect(signr).approve(this.pmWbtcDai.address, wbtcLiq);
+        */
+        console.log(diaLiq);
+        console.log(weiTransfer);
+        await this.pmWbtcDai.connect(signr).mintNewPosition(1, 1);
+        console.log("HIHI4");
+        
+
+        // Trade a bunch
+        // See the change in Fees
     });
 
 
