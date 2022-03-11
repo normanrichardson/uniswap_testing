@@ -7,26 +7,26 @@ import '@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 
 contract Swapper{
-    address private Tk1;
-    address private Tk2;
+    address private tk1;
+    address private tk2;
     uint24 public constant poolFee = 3000;
     ISwapRouter public immutable router;
 
-    constructor(ISwapRouter _router, address _Tk1, address _Tk2) {
-        Tk1 = _Tk1;
-        Tk2 = _Tk2;
+    constructor(ISwapRouter _router, address _tk1, address _tk2) {
+        tk1 = _tk1;
+        tk2 = _tk2;
         router = _router;
     }
 
     function swapExactInputSingle (uint256 ammount) public {
         
         address recipient = msg.sender;
-        TransferHelper.safeTransferFrom(Tk1, recipient, address(this), ammount);
-        TransferHelper.safeApprove(Tk1, address(router), ammount);
+        TransferHelper.safeTransferFrom(tk1, recipient, address(this), ammount);
+        TransferHelper.safeApprove(tk1, address(router), ammount);
 
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({        
-            tokenIn: Tk1,
-            tokenOut: Tk2,
+            tokenIn: tk1,
+            tokenOut: tk2,
             fee: poolFee,
             recipient: recipient,
             deadline: block.timestamp,
@@ -40,12 +40,12 @@ contract Swapper{
 
     function swapExactOutputSingle (uint256 amountOut, uint256 ammountMax) public {
         address recipient = msg.sender;
-        TransferHelper.safeTransferFrom(Tk1, recipient, address(this), ammountMax);
-        TransferHelper.safeApprove(Tk1, address(router), ammountMax);
+        TransferHelper.safeTransferFrom(tk1, recipient, address(this), ammountMax);
+        TransferHelper.safeApprove(tk1, address(router), ammountMax);
 
         ISwapRouter.ExactOutputSingleParams memory params = ISwapRouter.ExactOutputSingleParams({        
-            tokenIn: Tk1,
-            tokenOut: Tk2,
+            tokenIn: tk1,
+            tokenOut: tk2,
             fee: poolFee,
             recipient: recipient,
             deadline: block.timestamp,
@@ -58,8 +58,8 @@ contract Swapper{
         
         if (actAmountOut<amountOut) {
             // Reduce the residuce in the approval to zero
-            TransferHelper.safeApprove(Tk1, address(router), 0);
-            TransferHelper.safeTransfer(Tk1, recipient,amountOut-actAmountOut);
+            TransferHelper.safeApprove(tk1, address(router), 0);
+            TransferHelper.safeTransfer(tk1, recipient,amountOut-actAmountOut);
         }
     }
 }

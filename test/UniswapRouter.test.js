@@ -1,5 +1,3 @@
-
-
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
 
@@ -15,43 +13,46 @@ describe('Swapping weth for dia', () => {
         
         this.swapperDia = await Swapper.deploy(router.address, wethAddress, daiAddress);
         this.weth = await ethers.getContractAt('DepositableERC20', wethAddress);
-        this.dia = await ethers.getContractAt('DepositableERC20', daiAddress);
+        this.dia = await ethers.getContractAt('IERC20', daiAddress);
 
         // get signers for testing
-        const [owner, other1, other2] = await ethers.getSigners();
+        const [signr1, signr2, signr3] = await ethers.getSigners();
 
-        this.owner = owner;
-        this.other1 = other1;
-        this.other2 = other2;
+        this.signr1 = signr1;
+        this.signr2 = signr2;
+        this.signr3 = signr3;
     });
 
     it('Single exact input swap WETH for DIA', async () => {
+        const signr = this.signr3;
         const ethTransfer = 0.00000001;
         const weiTransfer = ethTransfer*ethers.constants.WeiPerEther;
-        const tx = await this.weth.connect(this.owner).deposit({value: weiTransfer});
+        
+        await this.weth.connect(signr).deposit({value: weiTransfer});
 
-        const diaBefore = await this.dia.balanceOf(this.owner.address);
+        const diaBefore = await this.dia.balanceOf(signr.address);
 
-        await this.weth.approve(this.swapperDia.address, weiTransfer);
-        await this.swapperDia.connect(this.owner).swapExactInputSingle(weiTransfer);
+        await this.weth.connect(signr).approve(this.swapperDia.address, weiTransfer);
+        await this.swapperDia.connect(signr).swapExactInputSingle(weiTransfer);
 
-        const diaAfter = await this.dia.balanceOf(this.owner.address);
+        const diaAfter = await this.dia.balanceOf(signr.address);
 
         expect(diaBefore).to.lt(diaAfter);
     });
 
     it('Single exact output swap WETH for DIA', async () => {
+        const signr = this.signr3;
         const diaOut = 1;
         const ethMax = 0.00000001;
         const weiMax = ethMax*ethers.constants.WeiPerEther;
-        const tx = await this.weth.connect(this.owner).deposit({value: weiMax});
+        const tx = await this.weth.connect(signr).deposit({value: weiMax});
 
-        const diaBefore = await this.dia.balanceOf(this.owner.address);
+        const diaBefore = await this.dia.balanceOf(signr.address);
 
-        await this.weth.approve(this.swapperDia.address, weiMax);
-        await this.swapperDia.connect(this.owner).swapExactOutputSingle(diaOut,weiMax);
+        await this.weth.connect(signr).approve(this.swapperDia.address, weiMax);
+        await this.swapperDia.connect(signr).swapExactOutputSingle(diaOut,weiMax);
 
-        const diaAfter = await this.dia.balanceOf(this.owner.address);
+        const diaAfter = await this.dia.balanceOf(signr.address);
         
         expect(diaAfter.sub(diaBefore)).to.equal(diaOut);
     });
