@@ -21,6 +21,8 @@ describe('UniswapV3Factory', function () {
 
         this.swapperDia = await Swapper.deploy(router.address, wethAddress, daiAddress);
         this.swapperUsdc = await Swapper.deploy(router.address, wethAddress, usdcAddress);
+        this.swapperDiaUsdc = await Swapper.deploy(router.address, daiAddress, usdcAddress);
+        this.swapperUsdcDia = await Swapper.deploy(router.address, usdcAddress, daiAddress);
         
         this.pmUsdcDai = await Liquidity.deploy(posMang.address, daiAddress, usdcAddress);
         
@@ -40,12 +42,12 @@ describe('UniswapV3Factory', function () {
 
     });
     
-    it.skip('The pool exisits', async () => {
+    it('The pool exisits', async () => {
         const poolAddress = await this.factory.getPool(this.daiAddress, this.usdcAddress, 100);
         
         // Returns the 0x address if the pool does not exist
         expect(poolAddress).to.not.be.properHex(0).to.not.hexEqual('0x');
-    })
+    });
 
     it('Add Liquidity', async () => {
         const signr = this.signr3;
@@ -98,9 +100,46 @@ describe('UniswapV3Factory', function () {
         const event = rc.events.find(event => event.event === 'IncLiquidity');
         const [tokenId, liquidity, amount0, amount1] = event.args;
 
-        console.log(tokenId, liquidity, amount0, amount1);
-
+        this.tokenId = tokenId;
         // Simulate trading
         // See the change in Fees
+    });
+
+    it('Simulate trading', async () => {
+        const signr = this.signr2;
+        const ethTransfer = ethers.BigNumber.from('1');
+        const weiTransfer = ethers.constants.WeiPerEther.mul(ethTransfer);
+        
+        // Get Dia
+        await this.weth.connect(signr).deposit({value: weiTransfer});
+
+        let before = await this.dia.connect(signr).balanceOf(signr.address);
+
+        await this.weth.connect(signr).approve(this.swapperDia.address, weiTransfer);
+        await this.swapperDia.connect(signr).swapExactInputSingle(weiTransfer);
+
+        let after = await this.dia.balanceOf(signr.address);
+        let delta = after.sub(before);
+        
+        for (let i=0; i<20; i++) {
+            let delta_i = delta;
+
+            //1st trade:
+            before = await this.usdc.connect(signr).balanceOf(signr.address);
+
+            await this.dia.connect(signr).approve(this.swapperDiaUsdc.address, delta);
+            await this.swapperDiaUsdc.connect(signr).swapExactInputSingle(delta);
+            after = await this.usdc.connect(signr).balanceOf(signr.address);
+            delta = after.sub(before);
+
+            //2nd trade
+            before = await this.dia.connect(signr).balanceOf(signr.address);
+            await this.usdc.connect(signr).approve(this.swapperUsdcDia.address, delta);
+            await this.swapperUsdcDia.connect(signr).swapExactInputSingle(delta);
+            after =  await this.dia.connect(signr).balanceOf(signr.address);
+            delta = after.sub(before);
+
+            expect(delta_i.sub(delta)).to.gt(0);
+        }
     });
 });
