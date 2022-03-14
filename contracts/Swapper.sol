@@ -9,12 +9,13 @@ import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 contract Swapper{
     address private tk1;
     address private tk2;
-    uint24 public constant poolFee = 3000;
+    uint24 private poolFee;
     ISwapRouter public immutable router;
 
-    constructor(ISwapRouter _router, address _tk1, address _tk2) {
+    constructor(ISwapRouter _router, address _tk1, address _tk2, uint24 _poolFee) {
         tk1 = _tk1;
         tk2 = _tk2;
+        poolFee = _poolFee;
         router = _router;
     }
 

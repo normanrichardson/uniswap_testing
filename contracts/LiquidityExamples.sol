@@ -15,8 +15,7 @@ import "hardhat/console.sol";
 contract LiquidityExamples is IERC721Receiver {
     address private tk1;
     address private tk2;
-
-    uint24 public constant poolFee = 100;
+    uint24 private poolFee;
 
     INonfungiblePositionManager public immutable nonfungiblePositionManager;
 
@@ -36,10 +35,12 @@ contract LiquidityExamples is IERC721Receiver {
     constructor(
         INonfungiblePositionManager _nonfungiblePositionManager,
         address _tk1,
-        address _tk2
+        address _tk2,
+        uint24 _poolFee
     ) {
         tk1 = _tk1;
         tk2 = _tk2;
+        poolFee = _poolFee;
         nonfungiblePositionManager = _nonfungiblePositionManager;
     }
 
@@ -153,7 +154,8 @@ contract LiquidityExamples is IERC721Receiver {
             });
 
         (amount0, amount1) = nonfungiblePositionManager.collect(params);
-
+        console.log(amount0);
+        console.log(amount1);
         // send collected feed back to owner
         _sendToOwner(tokenId, amount0, amount1);
     }

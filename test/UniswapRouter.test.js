@@ -4,14 +4,14 @@ const { expect } = require('chai');
 describe('Swapping weth for dia', () => {
     before( async () => {
         const routerAddress = '0xE592427A0AEce92De3Edee1F18E0157C05861564';
-        const wethAddress = '0xc778417E063141139Fce010982780140Aa0cD5Ab';
-        const daiAddress = '0x5592EC0cfb4dbc12D3aB100b257153436a1f0FEa';
+        const wethAddress = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2';
+        const daiAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
         
         const router = await ethers.getContractAt('ISwapRouter', routerAddress);
         
         const Swapper = await ethers.getContractFactory('Swapper');
         
-        this.swapperDia = await Swapper.deploy(router.address, wethAddress, daiAddress);
+        this.swapperDia = await Swapper.deploy(router.address, wethAddress, daiAddress, 3000);
         this.weth = await ethers.getContractAt('DepositableERC20', wethAddress);
         this.dia = await ethers.getContractAt('IERC20', daiAddress);
 
@@ -25,9 +25,9 @@ describe('Swapping weth for dia', () => {
 
     it('Single exact input swap WETH for DIA', async () => {
         const signr = this.signr3;
-        const ethTransfer = 0.00000001;
-        const weiTransfer = ethTransfer*ethers.constants.WeiPerEther;
-        
+        const ethTransfer = ethers.BigNumber.from('1');
+        const weiTransfer = ethTransfer.mul(ethers.constants.WeiPerEther);
+
         await this.weth.connect(signr).deposit({value: weiTransfer});
 
         const diaBefore = await this.dia.balanceOf(signr.address);

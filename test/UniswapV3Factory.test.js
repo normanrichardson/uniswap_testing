@@ -19,12 +19,12 @@ describe('UniswapV3Factory', function () {
         const Swapper = await ethers.getContractFactory('Swapper');
         const Liquidity = await ethers.getContractFactory('LiquidityExamples');
 
-        this.swapperDia = await Swapper.deploy(router.address, wethAddress, daiAddress);
-        this.swapperUsdc = await Swapper.deploy(router.address, wethAddress, usdcAddress);
-        this.swapperDiaUsdc = await Swapper.deploy(router.address, daiAddress, usdcAddress);
-        this.swapperUsdcDia = await Swapper.deploy(router.address, usdcAddress, daiAddress);
+        this.swapperDia = await Swapper.deploy(router.address, wethAddress, daiAddress, 3000);
+        this.swapperUsdc = await Swapper.deploy(router.address, wethAddress, usdcAddress, 3000);
+        this.swapperDiaUsdc = await Swapper.deploy(router.address, daiAddress, usdcAddress, 100);
+        this.swapperUsdcDia = await Swapper.deploy(router.address, usdcAddress, daiAddress, 100);
         
-        this.pmUsdcDai = await Liquidity.deploy(posMang.address, daiAddress, usdcAddress);
+        this.pmUsdcDai = await Liquidity.deploy(posMang.address, daiAddress, usdcAddress, 100);
         
         this.weth = await ethers.getContractAt('DepositableERC20', wethAddress);
         this.dia = await ethers.getContractAt('IERC20Extended', daiAddress);
@@ -43,12 +43,13 @@ describe('UniswapV3Factory', function () {
     });
     
     it('The pool exisits', async () => {
-        const poolAddress = await this.factory.getPool(this.daiAddress, this.usdcAddress, 100);
+        const poolDiaUsdc = await this.factory.getPool(this.daiAddress, this.usdcAddress, 100);
+        const swappe = await this.factory.getPool(this.daiAddress, this.usdcAddress, 100);
         
         // Returns the 0x address if the pool does not exist
-        expect(poolAddress).to.not.be.properHex(0).to.not.hexEqual('0x');
+        expect(poolDiaUsdc).to.not.be.properHex(0).to.not.hexEqual('0x');
     });
-
+    
     it('Add Liquidity', async () => {
         const signr = this.signr3;
         const ethTransfer = ethers.BigNumber.from('1');
@@ -101,13 +102,11 @@ describe('UniswapV3Factory', function () {
         const [tokenId, liquidity, amount0, amount1] = event.args;
 
         this.tokenId = tokenId;
-        // Simulate trading
-        // See the change in Fees
     });
 
     it('Simulate trading', async () => {
         const signr = this.signr2;
-        const ethTransfer = ethers.BigNumber.from('1');
+        const ethTransfer = ethers.BigNumber.from('5000');
         const weiTransfer = ethers.constants.WeiPerEther.mul(ethTransfer);
         
         // Get Dia
@@ -121,10 +120,10 @@ describe('UniswapV3Factory', function () {
         let after = await this.dia.balanceOf(signr.address);
         let delta = after.sub(before);
         
-        for (let i=0; i<20; i++) {
+        for (let i=0; i<100; i++) {
             let delta_i = delta;
 
-            //1st trade:
+            //1st trade forward:
             before = await this.usdc.connect(signr).balanceOf(signr.address);
 
             await this.dia.connect(signr).approve(this.swapperDiaUsdc.address, delta);
@@ -132,7 +131,7 @@ describe('UniswapV3Factory', function () {
             after = await this.usdc.connect(signr).balanceOf(signr.address);
             delta = after.sub(before);
 
-            //2nd trade
+            //2nd trade back:
             before = await this.dia.connect(signr).balanceOf(signr.address);
             await this.usdc.connect(signr).approve(this.swapperUsdcDia.address, delta);
             await this.swapperUsdcDia.connect(signr).swapExactInputSingle(delta);
@@ -141,5 +140,25 @@ describe('UniswapV3Factory', function () {
 
             expect(delta_i.sub(delta)).to.gt(0);
         }
+    });
+
+    it('Recover pool fees', async () => {
+        const signr = this.signr3;
+        const beforeUsdc = await this.usdc.connect(signr).balanceOf(signr.address);
+        const beforeDai = await this.dia.connect(signr).balanceOf(signr.address);
+
+        const tx = await this.pmUsdcDai.connect(signr).collectAllFees(this.tokenId);
+
+        const afterUsdc = await this.usdc.connect(signr).balanceOf(signr.address);
+        const afterDai = await this.dia.connect(signr).balanceOf(signr.address);
+
+        const feeGainsUsdc = afterUsdc.sub(beforeUsdc);
+        const feeGainsDia  = afterDai.sub(beforeDai);
+
+        expect(afterUsdc).to.gt(beforeUsdc);
+        expect(afterDai).to.gt(beforeDai);
+
+        console.log(`${ await this.dia.symbol() } fee gain: ${ethers.utils.formatUnits(feeGainsDia, await this.dia.decimals())}`);
+        console.log(`${ await this.usdc.symbol() } fee gain: ${ethers.utils.formatUnits(feeGainsUsdc, await this.usdc.decimals())}`);
     });
 });
