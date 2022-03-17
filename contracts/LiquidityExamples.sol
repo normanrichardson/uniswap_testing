@@ -31,6 +31,7 @@ contract LiquidityExamples is IERC721Receiver {
     mapping(uint256 => Deposit) public deposits;
 
     event IncLiquidity(uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1);
+    event DecLiquidity(uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1);
 
     constructor(
         INonfungiblePositionManager _nonfungiblePositionManager,
@@ -74,21 +75,18 @@ contract LiquidityExamples is IERC721Receiver {
     /// @return amount0 The amount of token0
     /// @return amount1 The amount of token1
     function mintNewPosition(
-            uint256 amount0ToMint,
-            uint256 amount1ToMint
-        )
-        external
-        returns (
-            uint256 tokenId,
-            uint128 liquidity,
-            uint256 amount0,
-            uint256 amount1
-        )
-    {
+        uint256 amount0ToMint,
+        uint256 amount1ToMint
+    )
+    external
+    returns (
+        uint256 tokenId,
+        uint128 liquidity,
+        uint256 amount0,
+        uint256 amount1
+    ) {
         // For this example, we will provide equal amounts of liquidity in both assets.
         // Providing liquidity in both assets means liquidity will be earning fees and is considered in-range.
-        //uint256 amount0ToMint = 1;
-        //uint256 amount1ToMint = 1;
 
         // transfer tokens to contract
         TransferHelper.safeTransferFrom(tk1, msg.sender, address(this), amount0ToMint);
@@ -140,7 +138,12 @@ contract LiquidityExamples is IERC721Receiver {
     /// @param tokenId The id of the erc721 token
     /// @return amount0 The amount of fees collected in token0
     /// @return amount1 The amount of fees collected in token1
-    function collectAllFees(uint256 tokenId) external returns (uint256 amount0, uint256 amount1) {
+    function collectAllFees(
+        uint256 tokenId
+    ) external returns (
+        uint256 amount0, 
+        uint256 amount1
+    ) {
         // Caller must own the ERC721 position, meaning it must be a deposit
 
         // set amount0Max and amount1Max to uint256.max to collect all fees
@@ -154,22 +157,22 @@ contract LiquidityExamples is IERC721Receiver {
             });
 
         (amount0, amount1) = nonfungiblePositionManager.collect(params);
-        console.log(amount0);
-        console.log(amount1);
         // send collected feed back to owner
         _sendToOwner(tokenId, amount0, amount1);
     }
 
     /// @notice A function that decreases the current liquidity by half. An example to show how to call the `decreaseLiquidity` function defined in periphery.
     /// @param tokenId The id of the erc721 token
+    /// @param percent the percentage to withdraw
     /// @return amount0 The amount received back in token0
     /// @return amount1 The amount returned back in token1
-    function decreaseLiquidityInHalf(uint256 tokenId) external returns (uint256 amount0, uint256 amount1) {
+    function decreaseLiquidity(uint256 tokenId, uint8 percent) external returns (uint256 amount0, uint256 amount1) {
         // caller must be the owner of the NFT
         require(msg.sender == deposits[tokenId].owner, 'Not the owner');
+        require(percent > 0 && percent <= 100, 'Not a percentage');
         // get liquidity data for tokenId
         uint128 liquidity = deposits[tokenId].liquidity;
-        uint128 halfLiquidity = liquidity / 2;
+        uint128 halfLiquidity = liquidity * percent / 100;
 
         // amount0Min and amount1Min are price slippage checks
         // if the amount received after burning is not greater than these minimums, transaction will fail
@@ -184,8 +187,22 @@ contract LiquidityExamples is IERC721Receiver {
 
         (amount0, amount1) = nonfungiblePositionManager.decreaseLiquidity(params);
 
+        INonfungiblePositionManager.CollectParams memory paramsCollect =
+            INonfungiblePositionManager.CollectParams({
+                tokenId: tokenId,
+                recipient: address(this),
+                amount0Max: uint128(amount0),
+                amount1Max: uint128(amount1)
+            });
+
+        (amount0, amount1) = nonfungiblePositionManager.collect(paramsCollect);
+        // send collected feed back to owner
+        //_sendToOwner(tokenId, amount0, amount1);
+
         //send liquidity back to owner
         _sendToOwner(tokenId, amount0, amount1);
+        
+        emit DecLiquidity(tokenId, liquidity, amount0, amount1);
     }
 
     /// @notice Increases liquidity in the current range
@@ -198,12 +215,12 @@ contract LiquidityExamples is IERC721Receiver {
         uint256 amountAdd0,
         uint256 amountAdd1
     )
-        external
-        returns (
-            uint128 liquidity,
-            uint256 amount0,
-            uint256 amount1
-        ) {
+    external
+    returns (
+        uint128 liquidity,
+        uint256 amount0,
+        uint256 amount1
+    ) {
         
         TransferHelper.safeTransferFrom(deposits[tokenId].token0, msg.sender, address(this), amountAdd0);
         TransferHelper.safeTransferFrom(deposits[tokenId].token1, msg.sender, address(this), amountAdd1);
@@ -222,6 +239,7 @@ contract LiquidityExamples is IERC721Receiver {
 
         (liquidity, amount0, amount1) = nonfungiblePositionManager.increaseLiquidity(params);
 
+        emit IncLiquidity(tokenId, liquidity, amount0, amount1);
     }
 
     /// @notice Transfers funds to owner of NFT
