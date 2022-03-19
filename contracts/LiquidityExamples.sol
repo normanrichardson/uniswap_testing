@@ -196,8 +196,6 @@ contract LiquidityExamples is IERC721Receiver {
             });
 
         (amount0, amount1) = nonfungiblePositionManager.collect(paramsCollect);
-        // send collected feed back to owner
-        //_sendToOwner(tokenId, amount0, amount1);
 
         //send liquidity back to owner
         _sendToOwner(tokenId, amount0, amount1);

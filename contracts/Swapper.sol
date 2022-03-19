@@ -36,7 +36,7 @@ contract Swapper{
             sqrtPriceLimitX96: 0
         });
 
-        uint256 amountOut = router.exactInputSingle(params);
+        router.exactInputSingle(params);
     }
 
     function swapExactOutputSingle (uint256 amountOut, uint256 ammountMax) public {
