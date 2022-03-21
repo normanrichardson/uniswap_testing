@@ -3,7 +3,7 @@ const { ethers } = require('hardhat');
 
 require('dotenv').config();
 
-describe('Test WETH', () => {
+describe('Test DepositableERC20 (WETH)', () => {
     let 
         weth,
         signr1,
