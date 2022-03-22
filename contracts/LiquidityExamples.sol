@@ -76,7 +76,9 @@ contract LiquidityExamples is IERC721Receiver {
     /// @return amount1 The amount of token1
     function mintNewPosition(
         uint256 amount0ToMint,
-        uint256 amount1ToMint
+        uint256 amount1ToMint,
+        int24 tickLower,
+        int24 tickUpper
     )
     external
     returns (
@@ -101,8 +103,8 @@ contract LiquidityExamples is IERC721Receiver {
                 token0: tk1,
                 token1: tk2,
                 fee: poolFee,
-                tickLower: TickMath.MIN_TICK,
-                tickUpper: TickMath.MAX_TICK,
+                tickLower: tickLower,
+                tickUpper: tickUpper,
                 amount0Desired: amount0ToMint,
                 amount1Desired: amount1ToMint,
                 amount0Min: 0,
