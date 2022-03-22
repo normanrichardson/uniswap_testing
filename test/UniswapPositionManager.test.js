@@ -321,5 +321,18 @@ describe('UniswapLiquidityManager', function () {
             expect(amount0).to.gt(0);
             expect(amount1).to.gt(0);
         });
+
+        it('Take a position outside of the tickspacing', async () => {
+            const signr = signr3;
+
+            await wbtc.connect(signr).approve(pmUsdcWbtc.address, wbtcLiqTest);
+            await usdc.connect(signr).approve(pmUsdcWbtc.address, usdcLiqTest);
+            
+            const tick_l = Math.floor(tickPrice/tickSpacing) * tickSpacing + 0.5 * tickSpacing;
+            const tick_u = tick_l + tickSpacing;
+
+            await expect(pmUsdcWbtc.connect(signr).mintNewPosition(wbtcLiqTest, usdcLiqTest, tick_l, tick_u))
+                .to.be.reverted;
+        });
     });
 });
